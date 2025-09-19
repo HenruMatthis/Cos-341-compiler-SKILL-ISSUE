@@ -1,0 +1,9 @@
+glob x = 10
+proc add(a, b) {
+    return a plus b;   // use textual operator plus
+}
+/* multi-line
+   comment */
+main {
+    print add(x, 5);
+}

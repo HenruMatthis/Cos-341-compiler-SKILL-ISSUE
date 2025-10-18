@@ -61,43 +61,91 @@ class TestParserSPL(unittest.TestCase):
         except Exception as e: import traceback; traceback.print_exc(); self.fail(f"Unexpected error: {e}")
 
     # --- Tests for Valid Constructs ---
-    # [Keep all valid tests as they were]
+    
     def test_minimal_program(self):
         source = "glob {} proc {} func {} main { var {} halt }"
-        ast = self._parse_string(source); self.assertIsInstance(ast, ProgramNode)
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast, ProgramNode)
+
     def test_global_vars(self):
         source = "glob { count pages word } proc {} func {} main { var {} halt }"
-        ast = self._parse_string(source); self.assertEqual(len(ast.globals.variables), 3)
+        ast = self._parse_string(source)
+        self.assertEqual(len(ast.globals.variables), 3)
+
     def test_simple_assignment(self):
-        source = "x = 42"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], AssignmentNode)
+        source = "x = 42"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], AssignmentNode)
+
     def test_assignment_var(self):
-        source = "a = b"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0].rhs.value, VarNode)
+        source = "a = b"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0].rhs.value, VarNode)
+
     def test_print_atom_number(self):
-        source = "print 42"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], PrintNode)
+        source = "print 42"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], PrintNode)
+
     def test_print_atom_id(self):
-        source = "print myvar"; ast = self._parse_string(source); self.assertEqual(ast.main.algorithm.instructions[0].output.value.name, "myvar")
+        source = "print myvar"
+        ast = self._parse_string(source)
+        self.assertEqual(ast.main.algorithm.instructions[0].output.value.name, "myvar")
+
     def test_print_string(self):
-        source = 'print "hello"'; ast = self._parse_string(source); self.assertEqual(ast.main.algorithm.instructions[0].output, "hello")
+        source = 'print "hello"'
+        ast = self._parse_string(source)
+        self.assertEqual(ast.main.algorithm.instructions[0].output, "hello")
+
     def test_if_then(self):
-        source = "if (x > 0) { halt }"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], IfBranchNode)
+        source = "if (x > 0) { halt }"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], IfBranchNode)
+
     def test_if_then_else(self):
-        source = "if (x eq 0) { x = 1 } else { x = 0 }"; ast = self._parse_string(source); self.assertIsNotNone(ast.main.algorithm.instructions[0].else_branch)
+        source = "if (x eq 0) { x = 1 } else { x = 0 }"
+        ast = self._parse_string(source)
+        self.assertIsNotNone(ast.main.algorithm.instructions[0].else_branch)
+
     def test_while_loop(self):
-        source = "while (i > 0) { i = (i minus 1) }"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], WhileLoopNode)
+        source = "while (i > 0) { i = (i minus 1) }"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], WhileLoopNode)
+
     def test_do_until_loop(self):
-        source = "do { i = (i plus 1) } until (i eq 10)"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], DoUntilLoopNode)
+        source = "do { i = (i plus 1) } until (i eq 10)"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], DoUntilLoopNode)
+
     def test_procedure_def(self):
-        source = "glob {} proc { pdef myproc ( a b ) { local { tmp } tmp = a ; a = b ; b = tmp } } func {} main { var {} halt }"; ast = self._parse_string(source); self.assertEqual(len(ast.procs.procedures), 1)
+        source = "glob {} proc { pdef myproc ( a b ) { local { tmp } tmp = a ; a = b ; b = tmp } } func {} main { var {} halt }"
+        ast = self._parse_string(source)
+        self.assertEqual(len(ast.procs.procedures), 1)
+
     def test_function_def(self):
-        source = "glob {} proc {} func { fdef add ( x y ) { local {res} res = (x plus y) ; return res } } main { var {} halt }"; ast = self._parse_string(source); self.assertEqual(len(ast.funcs.functions), 1)
+        source = "glob {} proc {} func { fdef add ( x y ) { local {res} res = (x plus y) ; return res } } main { var {} halt }"
+        ast = self._parse_string(source)
+        self.assertEqual(len(ast.funcs.functions), 1)
+
     def test_procedure_call(self):
-        source = "glob {} proc { pdef swap(x y) { local {} x = y } } func {} main { var {a b} swap(a b) }"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], ProcedureCallNode)
+        source = "glob {} proc { pdef swap(x y) { local {} x = y } } func {} main { var {a b} swap(a b) }"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], ProcedureCallNode)
+
     def test_function_call_in_assignment(self):
-        source = "glob {} proc {} func { fdef add(a b) { local{r} r=(a plus b); return r } } main { var { res x y} res = add(x y) }"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0].rhs, FunctionCallNode)
+        source = "glob {} proc {} func { fdef add(a b) { local{r} r=(a plus b); return r } } main { var { res x y} res = add(x y) }"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0].rhs, FunctionCallNode)
+
     def test_complex_expression(self):
-        source = "a = (neg ((b mult c) plus 5))"; ast = self._parse_string(source); self.assertIsInstance(ast.main.algorithm.instructions[0], AssignmentNode)
+        source = "a = (neg ((b mult c) plus 5))"
+        ast = self._parse_string(source)
+        self.assertIsInstance(ast.main.algorithm.instructions[0], AssignmentNode)
+
     def test_algo_sequence(self):
-        source = "x = 1 ; print x ; halt"; ast = self._parse_string(source); self.assertEqual(len(ast.main.algorithm.instructions), 3)
+        source = "x = 1 ; print x ; halt"
+        ast = self._parse_string(source)
+        self.assertEqual(len(ast.main.algorithm.instructions), 3)
 
     # --- Tests for Syntax Errors ---
 
@@ -139,7 +187,7 @@ class TestParserSPL(unittest.TestCase):
 
     def test_error_too_many_params(self):
         source = "glob {} proc { pdef p (a b c d) { local{} halt } } func {} main { var{} halt}"
-        with self.assertRaisesRegex(ParseError, r"Expected type 'RPAREN' .* near token 'd' \(type ID\)"):
+        with self.assertRaisesRegex(ParseError, r"Maximum number of variables \(3\) exceeded in list.* near token 'd' \(type ID\)"):
              self._parse_string(source)
 
     def test_error_too_many_args(self):

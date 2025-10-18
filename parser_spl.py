@@ -6,7 +6,6 @@ from ast_nodes import *
 from typing import List, Optional, Union
 import re
 
-# --- ParseError Class (keep as is) ---
 class ParseError(Exception):
     def __init__(self, message, token: Optional[Token] = None):
         if token and isinstance(token, Token):
@@ -27,7 +26,6 @@ class ParseError(Exception):
         self.token = token
 
 class Parser:
-    # --- __init__ to _parse_atom (keep as is) ---
     def __init__(self, tokens: List[Token]):
         if not tokens: raise ParseError("Cannot parse empty token list.")
         self.tokens = tokens

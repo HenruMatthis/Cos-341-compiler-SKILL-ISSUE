@@ -1,9 +1,4 @@
-# lexer.py
-"""
-Regex-based Lexer for SPL (Python implementation).
-Aligned with COS341 Semester Project 2025 Phase 1 specification.
-"""
-
+# lexer.py  (tightened version)
 from dataclasses import dataclass
 import re
 from typing import Iterator, List, Dict, Optional, Tuple
@@ -27,8 +22,7 @@ class LexerError(Exception):
         self.column = column
 
 class Lexer:
-    """Regex-based Lexer for SPL."""
-
+    """Regex-based Lexer for SPL – rejects every illegal character."""
     DEFAULT_TOKEN_SPEC: List[Tuple[str, str]] = [
         ('SKIP',         r'[ \t\r]+'),
         ('COMMENT',      r'//.*'),
@@ -39,12 +33,12 @@ class Lexer:
         ('LPAREN',       r'\('),
         ('RPAREN',       r'\)'),
         ('SEMICOLON',    r';'),
-        ('ASSIGN',       r'='), # Use ASSIGN for =
+        ('ASSIGN',       r'='),
         ('GT',           r'>'),
         ('COMMA',        r','),
         ('ID',           r'[a-z][a-z]*[0-9]*'),
         ('NEWLINE',      r'\n+'),
-        ('MISMATCH',     r'.'),
+        ('MISMATCH',     r'.'),          # <-- catches everything else
     ]
 
     DEFAULT_KEYWORDS: Dict[str, str] = {
@@ -62,6 +56,7 @@ class Lexer:
     master_pattern = re.compile("|".join(f"(?P<{name}>{pat})" for name, pat in DEFAULT_TOKEN_SPEC))
     _keyword_values_lookup = {v: k for k, v in DEFAULT_KEYWORDS.items()}
 
+    # ---------- token generators ----------
     def tokenize(self, text: str, filename: str = "<input>") -> Iterator[Token]:
         lineno = 1
         line_start = 0
@@ -69,7 +64,7 @@ class Lexer:
         end = len(text)
         while pos < end:
             m = Lexer.master_pattern.match(text, pos)
-            if not m:
+            if not m:                               # should never happen
                 col = pos - line_start + 1
                 raise LexerError(f"Unexpected character '{text[pos]}' at {filename}:{lineno}:{col}", lineno, col)
 
@@ -84,29 +79,29 @@ class Lexer:
             elif typ in ('SKIP', 'COMMENT'):
                 pass
             elif typ == 'ID':
-                if val in Lexer.DEFAULT_KEYWORDS:
-                    yield Token(Lexer.DEFAULT_KEYWORDS[val], None, lineno, col, start_index)
-                else:
-                    yield Token('ID', val, lineno, col, start_index)
+                yield Token(Lexer.DEFAULT_KEYWORDS.get(val, 'ID'),
+                           None if val in Lexer.DEFAULT_KEYWORDS else val,
+                           lineno, col, start_index)
             elif typ == 'NUMBER':
                 yield Token('NUMBER', int(val), lineno, col, start_index)
             elif typ == 'STRING':
-                inner_val = val[1:-1]
-                if len(inner_val) > 15:
-                    raise LexerError(f"String exceeds 15 chars", lineno, col)
-                yield Token('STRING', inner_val, lineno, col, start_index)
-            elif typ == 'MISMATCH':
+                inner = val[1:-1]
+                if len(inner) > 15:
+                    raise LexerError(f"String literal exceeds 15 characters", lineno, col)
+                yield Token('STRING', inner, lineno, col, start_index)
+            elif typ == 'MISMATCH':                 # <<-- illegal character
                 raise LexerError(f"Illegal character {val!r}", lineno, col)
-            else:
+            else:                                   # punctuation
                 yield Token(typ, None, lineno, col, start_index)
             pos = m.end()
+
         yield Token('EOF', None, lineno, pos - line_start + 1, pos)
 
     def tokenize_file(self, path: str) -> Iterator[Token]:
         try:
-            with open(path, 'r', encoding='utf8') as f:
+            with open(path, encoding='utf-8') as f:
                 yield from self.tokenize(f.read(), filename=path)
         except FileNotFoundError:
-             raise LexerError(f"File not found: {path}")
+            raise LexerError(f"File not found: {path}")
         except Exception as e:
-             raise LexerError(f"Error reading file {path}: {e}")
+            raise LexerError(f"Error reading file {path}: {e}")

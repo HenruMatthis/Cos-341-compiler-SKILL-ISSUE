@@ -57,7 +57,8 @@ class ProgramNode(ASTNode):
 class VarNode(ASTNode):
     name: str
     def pretty_print(self, indent_level: int = 0) -> str:
-        return f"{'  ' * indent_level}VarNode(name={self.name!r})"
+        unique_name = f", unique={self.symbol_info.unique_name}" if self.symbol_info else ""
+        return f"{'  ' * indent_level}VarNode(name={self.name!r}{unique_name})"
 
 @dataclass
 class VariableDeclsNode(ASTNode):

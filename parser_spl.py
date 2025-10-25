@@ -1,6 +1,4 @@
 # parser_spl.py
-# (Only showing the modified _parse_algo function and dependencies)
-
 from lexer import Lexer, Token, LexerError
 from ast_nodes import *
 from typing import List, Optional, Union

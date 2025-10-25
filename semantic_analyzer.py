@@ -49,7 +49,8 @@ class SemanticAnalyzer:
             if self.errors:
                 raise SemanticError("\n".join(self.errors))
 
-            return self.symbol_table
+            final_symbol_table_state = self.symbol_table
+            return final_symbol_table_state
 
         except SymbolTableError as e:
             raise SemanticError(f"Symbol table error: {e}")
@@ -58,7 +59,9 @@ class SemanticAnalyzer:
 
     def _visit_program(self, node: ProgramNode):
         """Visit the root program node and establish global scope."""
-
+        is_toplevel_call = self.symbol_table.current_scope_level() == 0
+        if is_toplevel_call:
+            self.symbol_table.enter_scope("Global", node)
         # Enter global scope
         self.symbol_table.enter_scope("Global", node)
 
@@ -87,7 +90,7 @@ class SemanticAnalyzer:
         self._visit_main_prog(node.main)
 
         # FIXED: snapshot BEFORE exiting global scope
-        self._snapshot_now("Global – end")
+        self._snapshot_now("Global – before exit")
         # Exit global scope
         self.symbol_table.exit_scope()
 
@@ -332,11 +335,14 @@ class SemanticAnalyzer:
         - RHS must evaluate to numeric
         """
         var_name = node.variable.name
+        var_node = node.variable
 
         # Check variable is declared
         var_info = self.symbol_table.lookup(var_name)
         if var_info is None:
             raise SemanticError(f"Undefined variable '{var_name}' in assignment")
+
+        var_node.symbol_info = var_info
 
         # Check variable is numeric (should always be true in SPL)
         if var_info.decl_type != "numeric":
@@ -383,11 +389,14 @@ class SemanticAnalyzer:
 
         elif isinstance(node.value, VarNode):
             # Variable reference
+            var_node = node.value
             var_name = node.value.name
             var_info = self.symbol_table.lookup(var_name)
 
             if var_info is None:
                 raise SemanticError(f"Undefined variable '{var_name}'")
+
+            var_node.symbol_info = var_info
 
             # All variables in SPL are numeric
             self._set_node_type(node, "numeric")
@@ -403,7 +412,8 @@ class SemanticAnalyzer:
         - Arguments must be checked
         - All functions return numeric in SPL
         """
-        func_name = node.name.name
+        func_node = node.name # Get the VarNode instance
+        func_name = func_node.name
 
         # Check function is declared
         func_info = self.symbol_table.lookup(func_name)
@@ -415,8 +425,17 @@ class SemanticAnalyzer:
                 f"'{func_name}' is not a function (it's a {func_info.kind})"
             )
 
-        # Check arguments
+        # <<< ADD ANNOTATION HERE >>>
+        func_node.symbol_info = func_info
+
+        # Check arguments (This should already visit the AtomNodes within)
         self._visit_input(node.arguments)
+
+        # Check argument count (Optional but good practice)
+        # expected_param_count = len(func_info.extra.get('param_names', [])) # Assuming param names stored in extra
+        # actual_arg_count = len(node.arguments.arguments)
+        # if actual_arg_count != expected_param_count:
+        #     raise SemanticError(f"Function '{func_name}' expects {expected_param_count} arguments, got {actual_arg_count}")
 
         # All functions return numeric
         self._set_node_type(node, "numeric")
@@ -428,7 +447,8 @@ class SemanticAnalyzer:
         - Procedure must be declared
         - Arguments must be checked
         """
-        proc_name = node.name.name
+        proc_node = node.name # Get the VarNode instance
+        proc_name = proc_node.name
 
         # Check procedure is declared
         proc_info = self.symbol_table.lookup(proc_name)
@@ -440,8 +460,17 @@ class SemanticAnalyzer:
                 f"'{proc_name}' is not a procedure (it's a {proc_info.kind})"
             )
 
+        # <<< ADD ANNOTATION HERE >>>
+        proc_node.symbol_info = proc_info
+
         # Check arguments
         self._visit_input(node.arguments)
+
+        # Check argument count (Optional but good practice)
+        # expected_param_count = len(proc_info.extra.get('param_names', []))
+        # actual_arg_count = len(node.arguments.arguments)
+        # if actual_arg_count != expected_param_count:
+        #     raise SemanticError(f"Procedure '{proc_name}' expects {expected_param_count} arguments, got {actual_arg_count}")
 
     def _visit_input(self, node: InputNode):
         """Visit input arguments (0-3 atoms)."""
